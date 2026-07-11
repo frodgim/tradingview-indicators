@@ -1,0 +1,116 @@
+//@version=6
+indicator("Medias Moviles + Distancias + SPX Zonas SMA8 [Combinado]", overlay=true)
+
+// ============================================================
+// BLOQUE 1: SMAs 8/20/50/100/200 + Panel de distancias + RSI
+// ============================================================
+showSMALines = input.bool(true, "Mostrar líneas SMA", group="Bloque 1: SMAs")
+
+sma8_color   = input.color(color.yellow,  "Color SMA 8",   group="Bloque 1: SMAs")
+sma20_color  = input.color(color.blue,    "Color SMA 20",  group="Bloque 1: SMAs")
+sma50_color  = input.color(color.purple,  "Color SMA 50",  group="Bloque 1: SMAs")
+sma100_color = input.color(color.fuchsia, "Color SMA 100", group="Bloque 1: SMAs")
+sma200_color = input.color(color.red,     "Color SMA 200", group="Bloque 1: SMAs")
+
+sma8   = ta.sma(close, 8)
+sma20  = ta.sma(close, 20)
+sma50  = ta.sma(close, 50)
+sma100 = ta.sma(close, 100)
+sma200 = ta.sma(close, 200)
+
+plot(showSMALines ? sma8   : na, title="SMA 8",   color=sma8_color,   linewidth=2)
+plot(showSMALines ? sma20  : na, title="SMA 20",  color=sma20_color,  linewidth=1)
+plot(showSMALines ? sma50  : na, title="SMA 50",  color=sma50_color,  linewidth=1)
+plot(showSMALines ? sma100 : na, title="SMA 100", color=sma100_color, linewidth=1)
+plot(showSMALines ? sma200 : na, title="SMA 200", color=sma200_color, linewidth=1)
+
+dist_sma8   = close - sma8
+dist_sma20  = close - sma20
+dist_sma50  = close - sma50
+dist_sma100 = close - sma100
+dist_sma200 = close - sma200
+
+dist_sma8_pct   = dist_sma8   / sma8   * 100
+dist_sma20_pct  = dist_sma20  / sma20  * 100
+dist_sma50_pct  = dist_sma50  / sma50  * 100
+dist_sma100_pct = dist_sma100 / sma100 * 100
+dist_sma200_pct = dist_sma200 / sma200 * 100
+
+// ---- Panel (tabla) ----
+showPanel      = input.bool(true, "Mostrar panel de distancias", group="Bloque 1: Panel")
+panelPosition  = input.string("Inferior Izquierda", "Posición del panel", options=["Superior Izquierda", "Superior Derecha", "Inferior Izquierda", "Inferior Derecha"], group="Bloque 1: Panel")
+rsiLength      = input.int(14, "Periodo RSI", group="Bloque 1: Panel")
+rsiOverbought  = input.int(80, "Nivel sobrecompra", group="Bloque 1: Panel")
+rsiOversold    = input.int(20, "Nivel sobreventa", group="Bloque 1: Panel")
+
+rsiValue  = ta.rsi(close, rsiLength)
+rsiStatus = rsiValue > rsiOverbought ? "Sobrecomprado" : rsiValue < rsiOversold ? "Sobrevendido" : "Neutral"
+
+tablePos = switch panelPosition
+    "Superior Izquierda" => position.top_left
+    "Superior Derecha"   => position.top_right
+    "Inferior Izquierda" => position.bottom_left
+    "Inferior Derecha"   => position.bottom_right
+    => position.bottom_left
+
+if showPanel and barstate.islast
+    var table distTable = table.new(tablePos, 2, 3, border_width=1, bgcolor=color.new(color.black, 70))
+    table.cell(distTable, 0, 0, "SMA8 " + str.tostring(dist_sma8, "#.##") + " (" + str.tostring(dist_sma8_pct, "#.##") + "%)", text_color=sma8_color)
+    table.cell(distTable, 1, 0, "SMA20 " + str.tostring(dist_sma20, "#.##") + " (" + str.tostring(dist_sma20_pct, "#.##") + "%)", text_color=sma20_color)
+    table.cell(distTable, 0, 1, "SMA50 " + str.tostring(dist_sma50, "#.##") + " (" + str.tostring(dist_sma50_pct, "#.##") + "%)", text_color=sma50_color)
+    table.cell(distTable, 1, 1, "SMA100 " + str.tostring(dist_sma100, "#.##") + " (" + str.tostring(dist_sma100_pct, "#.##") + "%)", text_color=sma100_color)
+    table.cell(distTable, 0, 2, "SMA200 " + str.tostring(dist_sma200, "#.##") + " (" + str.tostring(dist_sma200_pct, "#.##") + "%)", text_color=sma200_color)
+    table.cell(distTable, 1, 2, "RSI " + str.tostring(rsiValue, "#.##") + " " + rsiStatus, text_color=color.white)
+
+// ============================================================
+// BLOQUE 2: SPX - SMA8 Zonas por puntos o porcentaje
+// ============================================================
+showSPXZones = input.bool(true, "Mostrar zonas SPX SMA8", group="Bloque 2: SPX Zonas")
+
+usePercentage = input.bool(true, "Usar porcentajes", group="Bloque 2: SPX Zonas")
+zonesLength = input.int(8, "Periodo SMA (zonas)", minval=1, group="Bloque 2: SPX Zonas")
+
+pointLevel1 = input.float(8.0, "Nivel 1", minval=0.0, step=0.25, inline="points", group="Bloque 2: Distancias en puntos")
+pointLevel2 = input.float(15.0, "Nivel 2", minval=0.0, step=0.25, inline="points", group="Bloque 2: Distancias en puntos")
+pointLevel3 = input.float(25.0, "Nivel 3", minval=0.0, step=0.25, inline="points", group="Bloque 2: Distancias en puntos")
+
+percentLevel1 = input.float(0.15, "Nivel 1 (%)", minval=0.0, step=0.01, inline="percent", group="Bloque 2: Distancias porcentuales")
+percentLevel2 = input.float(0.20, "Nivel 2 (%)", minval=0.0, step=0.01, inline="percent", group="Bloque 2: Distancias porcentuales")
+percentLevel3 = input.float(0.35, "Nivel 3 (%)", minval=0.0, step=0.01, inline="percent", group="Bloque 2: Distancias porcentuales")
+
+zonesSmaColor    = input.color(color.yellow, "SMA 8 (zonas)", group="Bloque 2: Colores")
+upperZone1Color  = input.color(color.rgb(198, 239, 206), "Zona superior 1", group="Bloque 2: Colores")
+upperZone2Color  = input.color(color.rgb(99, 190, 123),  "Zona superior 2", group="Bloque 2: Colores")
+lowerZone1Color  = input.color(color.rgb(255, 199, 206), "Zona inferior 1", group="Bloque 2: Colores")
+lowerZone2Color  = input.color(color.rgb(248, 105, 107), "Zona inferior 2", group="Bloque 2: Colores")
+zoneTransparency = input.int(25, "Transparencia", minval=0, maxval=100, group="Bloque 2: Colores")
+
+zonesSma8 = ta.sma(close, zonesLength)
+
+distance1 = usePercentage ? zonesSma8 * percentLevel1 / 100.0 : pointLevel1
+distance2 = usePercentage ? zonesSma8 * percentLevel2 / 100.0 : pointLevel2
+distance3 = usePercentage ? zonesSma8 * percentLevel3 / 100.0 : pointLevel3
+
+up1 = zonesSma8 + distance1
+up2 = zonesSma8 + distance2
+up3 = zonesSma8 + distance3
+
+dn1 = zonesSma8 - distance1
+dn2 = zonesSma8 - distance2
+dn3 = zonesSma8 - distance3
+
+plot(showSPXZones ? zonesSma8 : na, color=zonesSmaColor, linewidth=2, title="SMA 8 (zonas)")
+
+pUp1 = plot(showSPXZones ? up1 : na, color=color.rgb(165, 214, 167), linewidth=1, title="Nivel superior 1")
+pUp2 = plot(showSPXZones ? up2 : na, color=color.rgb(102, 187, 106), linewidth=1, title="Nivel superior 2")
+pUp3 = plot(showSPXZones ? up3 : na, color=color.rgb(56, 142, 60),  linewidth=1, title="Nivel superior 3")
+
+pDn1 = plot(showSPXZones ? dn1 : na, color=color.rgb(239, 154, 154), linewidth=1, title="Nivel inferior 1")
+pDn2 = plot(showSPXZones ? dn2 : na, color=color.rgb(239, 83, 80),  linewidth=1, title="Nivel inferior 2")
+pDn3 = plot(showSPXZones ? dn3 : na, color=color.rgb(198, 40, 40),  linewidth=1, title="Nivel inferior 3")
+
+fill(pUp1, pUp2, color = showSPXZones ? color.new(upperZone1Color, zoneTransparency) : na, title="Zona superior 1")
+fill(pUp2, pUp3, color = showSPXZones ? color.new(upperZone2Color, zoneTransparency) : na, title="Zona superior 2")
+fill(pDn1, pDn2, color = showSPXZones ? color.new(lowerZone1Color, zoneTransparency) : na, title="Zona inferior 1")
+fill(pDn2, pDn3, color = showSPXZones ? color.new(lowerZone2Color, zoneTransparency) : na, title="Zona inferior 2")
+

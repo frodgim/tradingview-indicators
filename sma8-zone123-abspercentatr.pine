@@ -1,5 +1,5 @@
 //@version=6
-indicator("SMA8 Extension Zones (Points • % • ATR), overlay=true)
+indicator("SMA8 Extension Zones (Points • % • ATR)", overlay=true)
 
 calculationMode = input.string("Porcentaje", "Modo de cálculo", options=["Porcentaje", "Puntos", "ATR"], group="Modo de cálculo")
 
